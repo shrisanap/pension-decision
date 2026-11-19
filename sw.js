@@ -1,6 +1,6 @@
 // Pension Choice Calculator - service worker.
 // Change CACHE_VERSION whenever you replace index.html so installed copies refresh.
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE = 'pension-calc-' + CACHE_VERSION;
 const ASSETS = ['index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'];
 

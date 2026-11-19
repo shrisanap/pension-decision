@@ -66,6 +66,7 @@ input[type=number],input[type=text],select{width:100%;min-width:0;background:var
 .my{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px}
 .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr) auto;gap:6px;align-items:center}
 .row.da{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto}
+.row.pc{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto}
 .btn{appearance:none;border:1px solid var(--line);background:var(--surface2);color:var(--fg);border-radius:6px;padding:7px 11px;font:500 13px var(--font-body);cursor:pointer}
 .btn:hover{border-color:var(--accent)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -135,7 +136,7 @@ a{color:var(--accent)}
   #report th,#report td{white-space:normal;padding:5px 8px}
   .tbl{overflow:visible}
 }
-@media(max-width:560px){.row,.row.da{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.row .btn.x{justify-self:start}}
+@media(max-width:560px){.row,.row.da,.row.pc{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.row .btn.x{justify-self:start}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -183,17 +184,18 @@ function compute(p){
   const rm=Math.pow(1+nz(p.rAcc)/100,1/12)-1;
   const promo=new Map(); (p.promos||[]).forEach(x=>{if(x.b>0&&Number.isFinite(x.y))promo.set(mi(x.y,x.m),x.b)});
   const daAct=new Map(); (p.daActual||[]).forEach(x=>{if(Number.isFinite(x.d)&&Number.isFinite(x.y))daAct.set(mi(x.y,x.m),x.d/100)});
-  const pcIdx=mi(p.pcY,p.pcM), pcOn=!!p.pcOn;
+  const pcs=(p.pcs||[]).filter(x=>Number.isFinite(x.y)&&x.fit>0).map(x=>({idx:mi(x.y,x.m),fit:x.fit,da:nz(x.da)/100})).sort((a,b)=>a.idx-b.idx);
   let base=p.basic0, da=nz(p.da0)/100, cn=nz(p.corp0), cu=nz(p.corp0), basic=0, pay=0;
   const basics=[];
   for(let i=0;i<n;i++){
     const idx=s+i, m=(idx%12)+1;
     if(i>0){
       if(promo.has(idx)) base=promo.get(idx); else if(m===p.incM) base*=1+nz(p.inc)/100;
-      if(pcOn&&idx===pcIdx) da=nz(p.pcDa)/100;
+      const pcHit=pcs.filter(c=>c.idx===idx).pop();
+      if(pcHit) da=pcHit.da;
       else if(m===1||m===7) da=daAct.has(idx)?daAct.get(idx):(1+da)*Math.pow(1+nz(p.dag)/100,0.5)-1;
     }
-    basic=base*((pcOn&&idx>=pcIdx)?nz(p.pcFit):1);
+    basic=base*pcs.reduce((f,c)=>idx>=c.idx?f*c.fit:f,1);
     pay=basic*(1+da); basics.push(basic);
     cn=cn*(1+rm)+(nz(p.emp)+nz(p.erNps))/100*pay;
     cu=cu*(1+rm)+(nz(p.emp)+nz(p.erUps))/100*pay;
@@ -241,11 +243,11 @@ const now=new Date();
 const DEFAULTS={name:'',desig:'',lvl:'',startY:now.getFullYear(),startM:now.getMonth()+1,retY:2057,retM:12,joinY:2026,joinM:9,retAge:60,evalAge:85,
   basic0:52000,da0:60,corp0:85000,emp:10,erNps:14,erUps:10,inc:3,incM:1,
   promos:[{y:2032,m:4,b:76000},{y:2039,m:4,b:98000},{y:2048,m:4,b:128000}],dag:5,daActual:[],
-  pcOn:false,pcY:2027,pcM:1,pcFit:2,pcDa:0,
+  pcs:[],
   rAcc:7,rPost:7,annRate:6,annShare:40,cpi:5,dr:5,beDisc:7,
   rnPct:50,rnFull:20,upPct:50,upFull:25,upHalf:0.1,upW:0,fam:60,showUps:true,real:true};
 let st=load()||JSON.parse(JSON.stringify(DEFAULTS));
-function load(){try{const x=localStorage.getItem('pension-calc-v2');if(!x)return null;const o=JSON.parse(x);return Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),o)}catch(e){return null}}
+function load(){try{const x=localStorage.getItem('pension-calc-v2');if(!x)return null;const o=JSON.parse(x);const r=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),o);if(o.pcOn&&!o.pcs)r.pcs=[{y:o.pcY,m:o.pcM,fit:o.pcFit,da:o.pcDa}];['pcOn','pcY','pcM','pcFit','pcDa'].forEach(k=>delete r[k]);return r}catch(e){return null}}
 function save(){try{localStorage.setItem('pension-calc-v2',JSON.stringify(st))}catch(e){}}
 
 // ---------- formatting ----------
@@ -268,6 +270,12 @@ function promoRows(){return st.promos.map((p,i)=>`<div class="row" data-i="${i}"
   <input type="number" data-pk="y" value="${p.y}" aria-label="Promotion year">
   <input type="number" data-pk="b" value="${Number.isFinite(p.b)?p.b:''}" aria-label="New basic pay" placeholder="New basic">
   <button class="btn x" data-del="promo" aria-label="Remove promotion">✕</button></div>`).join('')}
+function pcRows(){return st.pcs.map((p,i)=>`<div class="row pc" data-i="${i}">
+  <select data-ck="m" aria-label="Pay commission month">${MN.map((n,j)=>`<option value="${j+1}" ${p.m===j+1?'selected':''}>${n}</option>`).join('')}</select>
+  <input type="number" data-ck="y" value="${p.y}" aria-label="Pay commission year">
+  <input type="number" data-ck="fit" value="${Number.isFinite(p.fit)?p.fit:''}" aria-label="Fitment factor" placeholder="Fitment ×" step="any">
+  <input type="number" data-ck="da" value="${Number.isFinite(p.da)?p.da:''}" aria-label="DA percent right after" placeholder="DA % after" step="any">
+  <button class="btn x" data-del="pc" aria-label="Remove pay commission">✕</button></div>`).join('')}
 function daRows(){return st.daActual.map((p,i)=>`<div class="row da" data-i="${i}">
   <select data-dk="m" aria-label="DA revision month"><option value="1" ${p.m===1?'selected':''}>Jan</option><option value="7" ${p.m===7?'selected':''}>Jul</option></select>
   <input type="number" data-dk="y" value="${p.y}" aria-label="DA revision year">
@@ -308,12 +316,9 @@ function buildInputs(){
     ${numField('dag','Assumed DA growth per year',{unit:'%',hint:'Applied each Jan and Jul. Roughly the inflation rate.'})}
     <div class="f"><span>Actual DA announced (replaces the assumption)</span><div id="daList" style="display:grid;gap:6px">${daRows()}</div>
     <div><button class="btn" id="addDa">Add actual DA</button></div></div>
-    <label class="check"><input type="checkbox" id="pcOn" ${st.pcOn?'checked':''}> Include a pay commission</label>
-    <div id="pcBox" style="display:${st.pcOn?'grid':'none'};gap:12px">
-      ${monthField('pc','Effective from','Arrears are ignored')}
-      ${numField('pcFit','Fitment factor on basic pay',{unit:'×',hint:'2.0 is a placeholder. Use the notified factor.'})}
-      ${numField('pcDa','DA right after the commission',{unit:'%',hint:'DA normally restarts near zero'})}
-    </div>
+    <div class="f"><span>Pay commissions (effective month, year, fitment factor, DA right after)</span><div id="pcList" style="display:grid;gap:6px">${pcRows()}</div>
+    <div><button class="btn" id="addPc">Add pay commission</button></div>
+    <small>Leave empty for none. Each commission multiplies basic pay by its fitment factor and resets DA to the figure you enter (it normally restarts near zero). Enter the notified factor. Promotions are entered in today’s pay scale; later commissions are applied on top of them. Arrears are ignored.</small></div>
   </div></details>
   <details open><summary>5. Returns and inflation</summary><div class="fields">
     <div class="f"><span>NPS return before retirement</span><div class="chips">${[6,7,9,11].map(preset).join('')}</div></div>
@@ -346,8 +351,9 @@ function bindInputs(){
     const t=e.target.closest('button'); if(!t)return;
     if(t.dataset.preset){st.rAcc=parseFloat(t.dataset.preset);$('rAcc').value=st.rAcc;root.querySelectorAll('[data-preset]').forEach(b=>b.setAttribute('aria-pressed',String(parseFloat(b.dataset.preset)===st.rAcc)));update()}
     else if(t.id==='addPromo'){const l=st.promos[st.promos.length-1];st.promos.push({y:l?l.y+3:st.startY+1,m:9,b:NaN});$('promoList').innerHTML=promoRows();update()}
+    else if(t.id==='addPc'){const l=st.pcs[st.pcs.length-1];st.pcs.push({y:l?l.y+10:st.startY+2,m:1,fit:NaN,da:0});$('pcList').innerHTML=pcRows();update()}
     else if(t.id==='addDa'){st.daActual.push({y:st.startY+1,m:1,d:NaN});$('daList').innerHTML=daRows();update()}
-    else if(t.dataset.del){const i=+t.closest('.row').dataset.i;(t.dataset.del==='promo'?st.promos:st.daActual).splice(i,1);$(t.dataset.del==='promo'?'promoList':'daList').innerHTML=t.dataset.del==='promo'?promoRows():daRows();update()}
+    else if(t.dataset.del){const i=+t.closest('.row').dataset.i;const L={promo:[st.promos,'promoList',promoRows],da:[st.daActual,'daList',daRows],pc:[st.pcs,'pcList',pcRows]}[t.dataset.del];L[0].splice(i,1);$(L[1]).innerHTML=L[2]();update()}
     else if(t.id==='resetBtn'){st=JSON.parse(JSON.stringify(DEFAULTS));buildInputs();update()}
     else if(t.id==='copyBtn'){copyResults()}
     else if(t.id==='pdfBtn'){savePdf()}
@@ -360,7 +366,7 @@ function onInput(e){
     if(el.type==='number')st[el.dataset.k]=el.value===''?NaN:parseFloat(el.value);
     else st[el.dataset.k]=parseInt(el.value,10);
     if(el.dataset.k==='rAcc')document.querySelectorAll('[data-preset]').forEach(b=>b.setAttribute('aria-pressed',String(parseFloat(b.dataset.preset)===st.rAcc)));
-  } else if(el.id==='pcOn'){st.pcOn=el.checked;$('pcBox').style.display=el.checked?'grid':'none'}
+  } else if(el.dataset.ck){const r=st.pcs[+el.closest('.row').dataset.i];r[el.dataset.ck]=el.value===''?NaN:parseFloat(el.value)}
   else if(el.id==='showUps'){st.showUps=el.checked}
   else if(el.dataset.pk){const r=st.promos[+el.closest('.row').dataset.i];r[el.dataset.pk]=el.value===''?NaN:parseFloat(el.value)}
   else if(el.dataset.dk){const r=st.daActual[+el.closest('.row').dataset.i];r[el.dataset.dk]=el.value===''?NaN:parseFloat(el.value)}
@@ -501,7 +507,7 @@ $('view-learn').innerHTML=`
 $('view-limits').innerHTML=`
 <section class="panel"><h2>How the numbers are built</h2><ul>
 <li>Basic pay grows with your annual increment and any promotions you list. A promotion replaces the running basic in that month.</li>
-<li>DA rises every January and July at the growth rate you set, unless you enter the actual announced rate. A pay commission multiplies basic pay by the fitment factor and resets DA.</li>
+<li>DA rises every January and July at the growth rate you set, unless you enter the actual announced rate. Each pay commission you add multiplies basic pay by its fitment factor and resets DA.</li>
 <li>Each month, your contribution plus the government contribution (24% of Basic+DA for NPS, 20% for the UPS pot) is added to the corpus, which earns the return you set.</li>
 <li>NPS: the annuity share of the corpus buys a flat annuity; the rest is a lump sum drawn down with yearly inflation step-ups to the age you chose, earning the post-retirement return.</li>
 <li>RNPS: pension = your percentage × last basic × service factor, plus DR at retirement. UPS: the same on the 12-month average, plus its lump sum.</li>
@@ -535,7 +541,7 @@ function inputsSummary(){
    ['Age at retirement',st.retAge],['Compared up to age',st.evalAge],['Basic pay today',inr(st.basic0)],['DA today',st.da0+'%'],
    ['NPS corpus today',inr(st.corp0)],['Contributions: you / govt NPS / govt UPS pot',st.emp+'% / '+st.erNps+'% / '+st.erUps+'%'],
    ['Annual increment',st.inc+'% in '+MN[st.incM-1]],['Promotions (new basic)',st.promos.length?st.promos.map(p=>mo(p.y,p.m)+': '+inr(p.b)).join('; '):'None'],
-   ['DA growth assumed',st.dag+'% a year'+(da?'; actual DA entered: '+da:'')],['Pay commission',st.pcOn?mo(st.pcY,st.pcM)+', fitment '+st.pcFit+'x, DA after '+st.pcDa+'%':'Not included'],
+   ['DA growth assumed',st.dag+'% a year'+(da?'; actual DA entered: '+da:'')],['Pay commissions',(()=>{const v=st.pcs.filter(x=>Number.isFinite(x.y)&&x.fit>0);return v.length?v.map(x=>mo(x.y,x.m)+': fitment '+x.fit+'x, DA after '+(x.da||0)+'%').join('; '):'Not included'})()],
    ['NPS return before / after retirement',st.rAcc+'% / '+st.rPost+'%'],['Annuity',st.annShare+'% of corpus at '+st.annRate+'%'],
    ['Inflation / DR growth',st.cpi+'% / '+st.dr+'%'],['Break-even discount rate',st.beDisc+'%'],
    ['RNPS pension',st.rnPct+'% of last basic; full after '+st.rnFull+' years'],['UPS pension',st.upPct+'% of 12-month average basic; full after '+st.upFull+' years'],
