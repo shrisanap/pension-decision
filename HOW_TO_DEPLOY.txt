@@ -1,0 +1,74 @@
+PENSION CHOICE CALCULATOR - installable web app (PWA)
+=====================================================
+
+FILES (keep this folder structure)
+  index.html              the whole app (still works on its own if you just open it)
+  manifest.webmanifest    name, colours and icons used when installing
+  sw.js                   service worker: makes the app open offline
+  icons/                  app icons (192, 512, maskable 512, Apple touch icon)
+
+WHY IT MUST BE ON HTTPS
+Chrome offers "Install" only for pages served over HTTPS (or from localhost).
+Opening index.html from your disk (file://) works as a normal page but cannot be installed.
+
+
+OPTION A - PythonAnywhere (same place as your other apps)
+ 1. Files tab: create a folder, for example  /home/YOURNAME/pension  and upload
+    everything in this package, keeping the icons/ sub-folder.
+ 2. Web tab > Static files > add a row:
+        URL:        /pension/
+        Directory:  /home/YOURNAME/pension
+    (Use a prefix that none of your Flask routes use. Your existing web app is not changed.)
+ 3. Press Reload on the Web tab.
+ 4. Open   https://YOURNAME.pythonanywhere.com/pension/index.html
+    This exact address is what colleagues use and install.
+ Note: PythonAnywhere may keep static files in its cache for a while. After you upload a new
+ index.html, also change CACHE_VERSION in sw.js (see "Updating" below) so phones fetch the new copy.
+
+OPTION B - GitHub Pages (free, no server)
+ 1. Create a public repository, upload the files, Settings > Pages > deploy from the main branch.
+ 2. Open https://YOURNAME.github.io/REPONAME/index.html
+
+OPTION C - Netlify Drop (quickest)
+ 1. Go to app.netlify.com/drop and drag this whole folder onto the page.
+ 2. You get an https link at once.
+
+TEST ON YOUR OWN COMPUTER FIRST (optional)
+ Open a terminal in this folder and run:   python -m http.server 8000
+ Then open http://localhost:8000/index.html in Chrome (localhost counts as secure).
+
+
+HOW COLLEAGUES INSTALL IT
+ Windows / Mac Chrome or Edge : open the link, click the "Install app" button at the top right of the
+                                page, or the install icon at the right end of the address bar.
+ Android Chrome               : open the link, tap "Install app" on the page (or the three-dot menu >
+                                Install app / Add to Home screen).
+ iPhone / iPad (Safari)       : open the link, tap Share > Add to Home Screen. (iPhones have no
+                                install button; this is the only way.)
+ After installing, it opens like an app and works offline.
+
+SAVING A PDF REPORT
+ Click "Save as PDF" (left panel, at the bottom). In the print window that opens, set the destination
+ to "Save as PDF". The report has the details entered, the result summary, both charts and the tables,
+ always in a light print layout. On an iPhone use Share > Print, then pinch out on the preview to get a PDF.
+ It works offline in the installed app. It does not work inside a claude.ai preview page, only in
+ the hosted or installed app.
+
+PRIVACY
+ Everything a colleague types is saved only in their own browser or app on their own device.
+ Nothing is sent to your server. Different devices do not share data.
+
+UPDATING THE APP LATER
+ 1. Replace index.html with the new version.
+ 2. Open sw.js and change   the CACHE_VERSION number in it (this package ships with 'v2'; use 'v3' next, and so on).
+ 3. Upload both files. Installed copies refresh the next time they are opened with internet
+    (the first open may show the old version; the next open shows the new one).
+
+CHANGING THE EXAMPLE VALUES
+ In index.html search for  const DEFAULTS=  . These are the pre-filled example values. If you change
+ them, also change 'pension-calc-v2' (appears twice) to 'pension-calc-v3' so that browsers that
+ saved the old example start fresh.
+
+LIMITS
+ Educational tool built from the two Maharashtra GRs and general NPS rules. Not an official
+ calculator and not financial advice. Check rules and deadlines with your DDO.

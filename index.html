@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B6E78">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Compare NPS, Maharashtra revised NPS (RNPS) and UPS from your own pay and corpus details.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pension Calc">
+<title>Pension Choice Calculator</title>
+<style>
+/* Layout: inputs column beside a results column on wide screens; stacked on phones. Ledger-like, restrained, teal for the assured pension, amber for market-linked NPS. */
+:root{
+  --bg:#EFF3F5; --surface:#FFFFFF; --surface2:#F6F9FA; --fg:#14232B; --muted:#52646E; --line:#D3DDE2;
+  --accent:#0B6E78; --accent-ink:#FFFFFF; --warn:#9A5B00; --warn-bg:#FFF3DC; --ok-bg:#E3F4F1;
+  --nps:#C8741B; --rnps:#0B7A85; --ups:#5362B8;
+  --font-body:system-ui,'Segoe UI',Inter,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --font-head:system-ui,'Segoe UI',Inter,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171C; --surface:#16232A; --surface2:#1B2B33; --fg:#E7EEF1; --muted:#9DB0B9; --line:#2B3E47;
+  --accent:#49BFCB; --accent-ink:#06242A; --warn:#F2B25C; --warn-bg:#33270F; --ok-bg:#12302F;
+  --nps:#F0A04B; --rnps:#3CC0CB; --ups:#9AA7F0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171C; --surface:#16232A; --surface2:#1B2B33; --fg:#E7EEF1; --muted:#9DB0B9; --line:#2B3E47;
+  --accent:#49BFCB; --accent-ink:#06242A; --warn:#F2B25C; --warn-bg:#33270F; --ok-bg:#12302F;
+  --nps:#F0A04B; --rnps:#3CC0CB; --ups:#9AA7F0; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1240px;margin:0 auto}
+h1,h2,h3{font-family:var(--font-head);line-height:1.2;text-wrap:balance;margin:0}
+h1{font-size:clamp(24px,4vw,34px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:19px;font-weight:600}
+h3{font-size:15px;font-weight:600}
+p{margin:0}
+.sub{color:var(--muted);max-width:70ch;margin-top:6px}
+.tabs{display:flex;gap:4px;margin:18px 0 18px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:600 14px var(--font-body);padding:10px 14px;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.tab:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+@media(min-width:960px){.layout{grid-template-columns:minmax(320px,400px) minmax(0,1fr);align-items:start}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.inputs details{border-bottom:1px solid var(--line)}
+.inputs details:last-of-type{border-bottom:0}
+.inputs summary{list-style:none;cursor:pointer;padding:14px 16px;font:600 14px var(--font-head);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.inputs summary::-webkit-details-marker{display:none}
+.inputs summary::after{content:"+";color:var(--muted);font-size:18px;line-height:1}
+.inputs details[open] summary::after{content:"\2212"}
+.fields{padding:0 16px 16px;display:grid;gap:12px}
+.f{display:grid;gap:4px;min-width:0}
+.f>span:first-child{font-size:13px;font-weight:500}
+.f small{color:var(--muted);font-size:12px}
+.inp{display:flex;align-items:center;gap:6px;min-width:0}
+input[type=number],input[type=text],select{width:100%;min-width:0;background:var(--surface2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 9px;font:inherit;font-variant-numeric:tabular-nums}
+.inp em{font-style:normal;color:var(--muted);font-size:13px;white-space:nowrap}
+.my{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr) auto;gap:6px;align-items:center}
+.row.da{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto}
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface2);color:var(--fg);border-radius:6px;padding:7px 11px;font:500 13px var(--font-body);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.x{padding:6px 9px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--surface2);color:var(--fg);border-radius:999px;padding:5px 11px;font:500 12.5px var(--font-body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:13.5px}
+.check input{margin-top:3px}
+.calc{background:var(--surface2);border:1px dashed var(--line);border-radius:6px;padding:8px 10px;font-variant-numeric:tabular-nums;font-weight:600}
+.example{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:9px 12px;font-size:13px;margin:0 16px 14px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;padding:14px 16px;border-top:1px solid var(--line)}
+.stack{display:grid;gap:18px;min-width:0}
+.verdict{padding:20px 22px;display:grid;gap:12px}
+.verdict h2{font-size:clamp(19px,2.6vw,24px)}
+.verdict ul{margin:0;padding-left:18px;display:grid;gap:6px}
+.note{font-size:12.5px;color:var(--muted)}
+.err{background:var(--warn-bg);color:var(--warn);padding:14px 16px;border-radius:8px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.tile .k{font-size:12px;color:var(--muted)}
+.tile .v{font:600 20px var(--font-head);font-variant-numeric:tabular-nums;margin-top:2px;overflow-wrap:anywhere}
+.tile .s{font-size:12px;color:var(--muted);margin-top:2px}
+.sec{padding:18px 20px;display:grid;gap:12px;min-width:0}
+.sec-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{appearance:none;border:0;background:var(--surface2);color:var(--fg);padding:6px 11px;font:500 13px var(--font-body);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.chart{position:relative;min-width:0}
+.chart svg{width:100%;height:auto;display:block;touch-action:pan-y}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:2;min-width:150px}
+.tip b{font-family:var(--font-head)}
+.tip div{display:flex;justify-content:space-between;gap:12px;font-variant-numeric:tabular-nums}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:13.5px}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--muted);font-size:12.5px}
+td.l,th.l{text-align:left;white-space:normal}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.learn{display:grid;gap:18px;max-width:900px}
+.learn .panel{padding:20px 22px;display:grid;gap:10px}
+.learn ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.learn table td,.learn table th{white-space:normal;vertical-align:top;text-align:left}
+.badge{display:inline-block;font-size:11.5px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--warn-bg);color:var(--warn);margin-left:6px;vertical-align:1px}
+a{color:var(--accent)}
+.foot{margin-top:26px;font-size:12.5px;color:var(--muted);max-width:80ch}
+#report{display:none}
+.rep-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--accent);padding-bottom:8px;margin-bottom:12px}
+.rep-top h1{font-size:22px}
+.rep-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;font-size:12px}
+.rep-grid div{display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px solid var(--line)}
+.rep-grid b{font-weight:500;color:var(--muted)}
+.rep-grid span{text-align:right}
+@media print{
+  @page{size:A4;margin:12mm}
+  :root:root:root{--bg:#fff;--surface:#fff;--surface2:#F6F9FA;--fg:#14232B;--muted:#52646E;--line:#D3DDE2;--accent:#0B6E78;--accent-ink:#fff;--warn:#9A5B00;--warn-bg:#FFF3DC;--nps:#C8741B;--rnps:#0B7A85;--ups:#5362B8;color-scheme:light}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff;padding:0;font-size:11px}
+  .wrap>h1,.wrap>.sub,.tabs,#view-calc,#view-learn,#view-limits,.foot{display:none!important}
+  #report{display:block}
+  #report .panel,#report .tile,#report .chart,#report table,#report .rep-grid div{break-inside:avoid}
+  #report .stack{gap:12px}
+  #report .sec,#report .verdict{padding:12px 14px}
+  #report th,#report td{white-space:normal;padding:5px 8px}
+  .tbl{overflow:visible}
+}
+@media(max-width:560px){.row,.row.da{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.row .btn.x{justify-self:start}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <h1>Pension Choice Calculator</h1>
+  <p class="sub">Compare staying in NPS with the Maharashtra revised NPS (RNPS) and the Unified Pension Scheme (UPS). Enter your own details; results update as you type. Everything stays in your browser.</p>
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="t-calc" aria-selected="true" data-tab="calc">Calculator</button>
+    <button class="tab" role="tab" id="t-learn" aria-selected="false" data-tab="learn">How the schemes work</button>
+    <button class="tab" role="tab" id="t-limits" aria-selected="false" data-tab="limits">Assumptions and limits</button>
+    <button class="btn primary" id="installBtn" hidden style="margin:6px 0 6px auto;white-space:nowrap">Install app</button>
+  </div>
+
+  <div id="view-calc" class="layout">
+    <aside class="panel inputs" id="inputs" aria-label="Your details"></aside>
+    <div class="stack" id="results" aria-live="polite"></div>
+  </div>
+
+  <div id="view-learn" class="learn" hidden></div>
+  <div id="view-limits" class="learn" hidden></div>
+  <div id="report" aria-hidden="true"></div>
+
+  <p class="foot">This is an educational tool built from the two Maharashtra GRs (UPS adoption of 20.09.2024 and the RNPS procedure circular of 06.05.2026) and general NPS rules. It is not financial advice and not an official calculator. Rules, deadlines and eligibility can change; confirm with your DDO or the Finance Department before you choose.</p>
+</div>
+
+<script>
+// ============ MODEL (pure) ============
+const MODEL_START=1;
+function nz(v){return Number.isFinite(v)?v:0}
+function mi(y,m){return y*12+(m-1)}
+function gf(gm,rr,T){ // sum_{k=0}^{T-1} (1+gm)^k/(1+rr)^(k+1)
+  if(T<=0)return 0; const q=(1+gm)/(1+rr);
+  if(Math.abs(q-1)<1e-12)return T/(1+rr);
+  return (1-Math.pow(q,T))/(1+rr)/(1-q);
+}
+function annF(rr,T){ if(T<=0)return 0; if(Math.abs(rr)<1e-12)return T; return (1-Math.pow(1+rr,-T))/rr }
+function compute(p){
+  const s=mi(p.startY,p.startM), e=mi(p.retY,p.retM), n=e-s+1;
+  if(!(n>=1)) return {error:'Retirement month must be on or after the start month.'};
+  if(n>600) return {error:'Retirement is more than 50 years away. Check the dates.'};
+  if(!(p.basic0>0)) return {error:'Enter your current basic pay.'};
+  if(!(p.evalAge>p.retAge)) return {error:'Evaluation age must be higher than the retirement age.'};
+  const rm=Math.pow(1+nz(p.rAcc)/100,1/12)-1;
+  const promo=new Map(); (p.promos||[]).forEach(x=>{if(x.b>0&&Number.isFinite(x.y))promo.set(mi(x.y,x.m),x.b)});
+  const daAct=new Map(); (p.daActual||[]).forEach(x=>{if(Number.isFinite(x.d)&&Number.isFinite(x.y))daAct.set(mi(x.y,x.m),x.d/100)});
+  const pcIdx=mi(p.pcY,p.pcM), pcOn=!!p.pcOn;
+  let base=p.basic0, da=nz(p.da0)/100, cn=nz(p.corp0), cu=nz(p.corp0), basic=0, pay=0;
+  const basics=[];
+  for(let i=0;i<n;i++){
+    const idx=s+i, m=(idx%12)+1;
+    if(i>0){
+      if(promo.has(idx)) base=promo.get(idx); else if(m===p.incM) base*=1+nz(p.inc)/100;
+      if(pcOn&&idx===pcIdx) da=nz(p.pcDa)/100;
+      else if(m===1||m===7) da=daAct.has(idx)?daAct.get(idx):(1+da)*Math.pow(1+nz(p.dag)/100,0.5)-1;
+    }
+    basic=base*((pcOn&&idx>=pcIdx)?nz(p.pcFit):1);
+    pay=basic*(1+da); basics.push(basic);
+    cn=cn*(1+rm)+(nz(p.emp)+nz(p.erNps))/100*pay;
+    cu=cu*(1+rm)+(nz(p.emp)+nz(p.erUps))/100*pay;
+  }
+  const last=basic, daRet=da, payRet=pay;
+  const lastN=basics.slice(-12), avg12=lastN.reduce((a,b)=>a+b,0)/lastN.length;
+  const cpi=nz(p.cpi)/100, infl=Math.pow(1+cpi,n/12);
+  const g=Math.pow(1+cpi,1/12)-1, gdr=Math.pow(1+nz(p.dr)/100,1/12)-1, rp=Math.pow(1+nz(p.rPost)/100,1/12)-1;
+  const N=Math.round((p.evalAge-p.retAge)*12);
+  const gfC=gf(g,rp,N), gfD=gf(gdr,rp,N);
+  const annShare=nz(p.annShare)/100;
+  const nAnn=annShare*cn*nz(p.annRate)/100/12, nL=(1-annShare)*cn, nW0=nL/gfC;
+  const svcM=e-mi(p.joinY,p.joinM)+1; if(!(svcM>=1)) return {error:'Month of joining must be on or before the last month of service.'};
+  const svcY=Math.floor(svcM/12), halfYears=Math.floor(svcM/6);
+  const rFac=Math.min(1,svcY/p.rnFull), rP0=nz(p.rnPct)/100*last*rFac*(1+daRet);
+  const uFac=Math.min(1,svcY/p.upFull), uBase=nz(p.upPct)/100*avg12*uFac;
+  const w=nz(p.upW)/100, uP0=uBase*(1-w)*(1+daRet);
+  const uLump=halfYears*nz(p.upHalf)*payRet, uPot=uLump+w*cu, uW0=uPot/gfC;
+  const R={nAnn,nL,nW0,rP0,uP0,uLump,uPot,uW0,infl,cpi,g,gdr,N};
+  const inc=(t)=>({ // nominal monthly income t months after retirement
+    nps:nAnn+(t<N?nW0*Math.pow(1+g,t):0),
+    rnps:rP0*Math.pow(1+gdr,t),
+    ups:uP0*Math.pow(1+gdr,t)+(t<N?uW0*Math.pow(1+g,t):0)});
+  const real=(t,x)=>x/(infl*Math.pow(1+cpi,t/12));
+  const pts=[]; for(let t=0;t<N;t+=12)pts.push(t); pts.push(N-1);
+  const income=pts.map(t=>{const v=inc(t);return {t,age:p.retAge+(t===N-1?N:t)/12,nom:v,real:{nps:real(t,v.nps),rnps:real(t,v.rnps),ups:real(t,v.ups)}}});
+  // present values to the evaluation age
+  const pv={nps:(nAnn*annF(rp,N)+nL)/infl, rnps:rP0*gfD/infl, ups:(uP0*gfD+uPot)/infl};
+  // break-even
+  const rb=Math.pow(1+nz(p.beDisc)/100,1/12)-1;
+  const cum=[];
+  for(let k=0;k<=45;k++){const T=12*k, G=gf(gdr,rb,T);
+    cum.push({k,age:p.retAge+k,nps:(nL+nAnn*annF(rb,T))/infl, rnps:rP0*G/infl, ups:(uPot+uP0*G)/infl});}
+  function be(key){
+    for(let k=0;k<cum.length;k++){const d=cum[k][key]-cum[k].nps;
+      if(d>=0){ if(k===0)return p.retAge; const dp=cum[k-1][key]-cum[k-1].nps; return p.retAge+(k-1)+(-dp)/(d-dp);} }
+    return null;}
+  return {n,last,daRet,payRet,avg12,cn,cu,infl,R,income,pv,cum,be:{rnps:be('rnps'),ups:be('ups')},
+    cnReal:cn/infl, forfeitReal:nL/infl, rP0Real:rP0/infl, uLumpReal:uLump/infl, nAnn,nL,rP0,uP0,uLump,uPot,N,rFac,uFac,svcM,svcY,halfYears};
+}
+// ============ END MODEL ============
+
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const now=new Date();
+const DEFAULTS={name:'',desig:'',lvl:'',startY:now.getFullYear(),startM:now.getMonth()+1,retY:2057,retM:12,joinY:2026,joinM:9,retAge:60,evalAge:85,
+  basic0:52000,da0:60,corp0:85000,emp:10,erNps:14,erUps:10,inc:3,incM:1,
+  promos:[{y:2032,m:4,b:76000},{y:2039,m:4,b:98000},{y:2048,m:4,b:128000}],dag:5,daActual:[],
+  pcOn:false,pcY:2027,pcM:1,pcFit:2,pcDa:0,
+  rAcc:7,rPost:7,annRate:6,annShare:40,cpi:5,dr:5,beDisc:7,
+  rnPct:50,rnFull:20,upPct:50,upFull:25,upHalf:0.1,upW:0,fam:60,showUps:true,real:true};
+let st=load()||JSON.parse(JSON.stringify(DEFAULTS));
+function load(){try{const x=localStorage.getItem('pension-calc-v2');if(!x)return null;const o=JSON.parse(x);return Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),o)}catch(e){return null}}
+function save(){try{localStorage.setItem('pension-calc-v2',JSON.stringify(st))}catch(e){}}
+
+// ---------- formatting ----------
+const inr=x=>'₹'+Math.round(x).toLocaleString('en-IN');
+function short(x){const a=Math.abs(x);if(a>=1e7)return '₹'+(x/1e7).toFixed(2)+' Cr';if(a>=1e5)return '₹'+(x/1e5).toFixed(2)+' L';return inr(x)}
+function axis(x){const a=Math.abs(x);if(a>=1e7)return (x/1e7).toFixed(a>=1e8?0:1)+' Cr';if(a>=1e5)return (x/1e5).toFixed(a>=1e6?0:1)+' L';if(a>=1e3)return (x/1e3).toFixed(0)+'k';return String(Math.round(x))}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const COL={nps:'var(--nps)',rnps:'var(--rnps)',ups:'var(--ups)'};
+const NAME={nps:'NPS (stay)',rnps:'RNPS',ups:'UPS'};
+
+// ---------- inputs ----------
+const $=id=>document.getElementById(id);
+function numField(id,label,o={}){
+  return `<label class="f" for="${id}"><span>${label}</span><span class="inp"><input type="number" inputmode="decimal" id="${id}" step="${o.step||'any'}" ${o.min!=null?`min="${o.min}"`:''} value="${Number.isFinite(st[id])?st[id]:''}" data-k="${id}">${o.unit?`<em>${o.unit}</em>`:''}</span>${o.hint?`<small>${o.hint}</small>`:''}</label>`}
+function monthField(pre,label,hint){
+  const mOpts=MN.map((n,i)=>`<option value="${i+1}" ${st[pre+'M']===i+1?'selected':''}>${n}</option>`).join('');
+  return `<div class="f"><span>${label}</span><span class="my"><select id="${pre}M" data-k="${pre}M" aria-label="${label} month">${mOpts}</select><input type="number" id="${pre}Y" data-k="${pre}Y" value="${st[pre+'Y']}" aria-label="${label} year" step="1"></span>${hint?`<small>${hint}</small>`:''}</div>`}
+function promoRows(){return st.promos.map((p,i)=>`<div class="row" data-i="${i}">
+  <select data-pk="m" aria-label="Promotion month">${MN.map((n,j)=>`<option value="${j+1}" ${p.m===j+1?'selected':''}>${n}</option>`).join('')}</select>
+  <input type="number" data-pk="y" value="${p.y}" aria-label="Promotion year">
+  <input type="number" data-pk="b" value="${Number.isFinite(p.b)?p.b:''}" aria-label="New basic pay" placeholder="New basic">
+  <button class="btn x" data-del="promo" aria-label="Remove promotion">✕</button></div>`).join('')}
+function daRows(){return st.daActual.map((p,i)=>`<div class="row da" data-i="${i}">
+  <select data-dk="m" aria-label="DA revision month"><option value="1" ${p.m===1?'selected':''}>Jan</option><option value="7" ${p.m===7?'selected':''}>Jul</option></select>
+  <input type="number" data-dk="y" value="${p.y}" aria-label="DA revision year">
+  <input type="number" data-dk="d" value="${Number.isFinite(p.d)?p.d:''}" aria-label="Actual DA percent" placeholder="DA %" step="any">
+  <button class="btn x" data-del="da" aria-label="Remove DA entry">✕</button></div>`).join('')}
+function buildInputs(){
+  const preset=(v)=>`<button class="chip" data-preset="${v}" aria-pressed="${Math.abs(st.rAcc-v)<1e-9}">${v}%</button>`;
+  $('inputs').innerHTML=`
+  <div class="example" id="exampleNote">Pre-filled with an example of a new recruit, about 31 years from retirement. Replace every value with your own.</div>
+  <details open><summary>About you (optional)</summary><div class="fields">
+    <label class="f" for="empName"><span>Name of the employee</span><input type="text" id="empName" data-s="name" maxlength="80" autocomplete="off" value="${esc(st.name||'')}"><small>Optional. Appears on the PDF report. Stays on this device.</small></label>
+    <label class="f" for="empDesig"><span>Current designation</span><select id="empDesig" data-s="desig">${['','Assistant Professor','Associate Professor','Professor'].map(o=>`<option value="${o}" ${st.desig===o?'selected':''}>${o||'Not stated'}</option>`).join('')}</select></label>
+    <label class="f" for="empLvl"><span>Current academic level</span><select id="empLvl" data-s="lvl">${['','AL-10','AL-11','AL-12','AL-13A','AL-14'].map(o=>`<option value="${o}" ${st.lvl===o?'selected':''}>${o||'Not stated'}</option>`).join('')}</select></label>
+  </div></details>
+  <details open><summary>1. Service and retirement</summary><div class="fields">
+    ${monthField('start','Calculate from','Usually the current month')}
+    ${monthField('ret','Last month of service','Month you retire')}
+    ${monthField('join','Month of joining regular service','Counts towards qualifying service')}
+    <div class="f"><span>Qualifying service at retirement</span><div class="calc" id="svcOut" aria-live="polite"></div><small>Calculated from joining month to last month of service, in completed years</small></div>
+    ${numField('retAge','Age at retirement',{unit:'years'})}
+    ${numField('evalAge','Age to compare up to (free cell)',{unit:'years',hint:'Try 75, 85, 95. The break-even age below does not depend on it.'})}
+  </div></details>
+  <details open><summary>2. Pay, DA and NPS today</summary><div class="fields">
+    ${numField('basic0','Current basic pay',{unit:'₹/month'})}
+    ${numField('da0','Current DA',{unit:'% of basic',hint:'Check your latest payslip'})}
+    ${numField('corp0','NPS corpus today',{unit:'₹',hint:'Contribution plus gains, from your PRAN statement'})}
+    ${numField('emp','Your contribution',{unit:'% of Basic+DA'})}
+    ${numField('erNps','Government contribution in NPS',{unit:'% of Basic+DA'})}
+    ${numField('erUps','Government contribution in UPS pot',{unit:'% of Basic+DA',hint:'UPS puts 10% + 10% into your own pot; the extra 8.5% goes to a government pool'})}
+  </div></details>
+  <details><summary>3. Increments and promotions</summary><div class="fields">
+    ${numField('inc','Annual increment',{unit:'%'})}
+    <label class="f" for="incM"><span>Increment month</span><select id="incM" data-k="incM">${MN.map((n,i)=>`<option value="${i+1}" ${st.incM===i+1?'selected':''}>${n}</option>`).join('')}</select></label>
+    <div class="f"><span>Promotions (month, year, new basic pay)</span><div id="promoList" style="display:grid;gap:6px">${promoRows()}</div>
+    <div><button class="btn" id="addPromo">Add promotion</button></div></div>
+  </div></details>
+  <details><summary>4. DA path and pay commission</summary><div class="fields">
+    ${numField('dag','Assumed DA growth per year',{unit:'%',hint:'Applied each Jan and Jul. Roughly the inflation rate.'})}
+    <div class="f"><span>Actual DA announced (replaces the assumption)</span><div id="daList" style="display:grid;gap:6px">${daRows()}</div>
+    <div><button class="btn" id="addDa">Add actual DA</button></div></div>
+    <label class="check"><input type="checkbox" id="pcOn" ${st.pcOn?'checked':''}> Include a pay commission</label>
+    <div id="pcBox" style="display:${st.pcOn?'grid':'none'};gap:12px">
+      ${monthField('pc','Effective from','Arrears are ignored')}
+      ${numField('pcFit','Fitment factor on basic pay',{unit:'×',hint:'2.0 is a placeholder. Use the notified factor.'})}
+      ${numField('pcDa','DA right after the commission',{unit:'%',hint:'DA normally restarts near zero'})}
+    </div>
+  </div></details>
+  <details open><summary>5. Returns and inflation</summary><div class="fields">
+    <div class="f"><span>NPS return before retirement</span><div class="chips">${[6,7,9,11].map(preset).join('')}</div></div>
+    ${numField('rAcc','NPS return before retirement',{unit:'% a year',hint:'Auto choice: close to 7% recently'})}
+    ${numField('rPost','Return on money after retirement',{unit:'% a year'})}
+    ${numField('annRate','Annuity rate',{unit:'% a year',hint:'Single life, no return of purchase price'})}
+    ${numField('annShare','Share of NPS corpus used for annuity',{unit:'%',hint:'The rest is the lump sum'})}
+    ${numField('cpi','Inflation',{unit:'% a year',hint:'Used to show results in today’s rupees'})}
+    ${numField('dr','Pension DR growth',{unit:'% a year',hint:'Lower this below inflation to test DR lagging'})}
+    ${numField('beDisc','Discount rate for break-even',{unit:'% a year',hint:'0 gives simple cumulative rupees'})}
+  </div></details>
+  <details><summary>6. Scheme terms (from the GRs)</summary><div class="fields">
+    ${numField('rnPct','RNPS pension as % of last basic',{unit:'%'})}
+    ${numField('rnFull','RNPS service for full pension',{unit:'years',hint:'Shorter service is pro-rated here'})}
+    ${numField('upPct','UPS pension as % of average last 12 months basic',{unit:'%'})}
+    ${numField('upFull','UPS service for full pension',{unit:'years'})}
+    ${numField('upHalf','UPS lump sum per completed 6 months',{unit:'× (Basic+DA)',hint:'1/10th = 0.1'})}
+    ${numField('upW','UPS: share of own pot withdrawn',{unit:'%',hint:'Up to 60%. The assured pension falls in proportion.'})}
+    ${numField('fam','Family pension',{unit:'% of pension'})}
+    <label class="check"><input type="checkbox" id="showUps" ${st.showUps?'checked':''}> Include UPS in the comparison</label>
+  </div></details>
+  <div class="bar"><button class="btn" id="resetBtn">Reset to example</button><button class="btn primary" id="pdfBtn">Save as PDF</button><button class="btn" id="copyBtn">Copy results</button><span class="note" id="copyMsg" role="status"></span></div>`;
+  bindInputs(); syncExample(); $('svcOut').textContent=svcText();
+}
+function syncExample(){const ex=$('exampleNote');if(ex)ex.style.display=JSON.stringify(Object.assign({},st,{real:0}))!==JSON.stringify(Object.assign({},DEFAULTS,{real:0}))?'none':''}
+function bindInputs(){
+  const root=$('inputs');
+  root.addEventListener('input',onInput); root.addEventListener('change',onInput);
+  root.addEventListener('click',e=>{
+    const t=e.target.closest('button'); if(!t)return;
+    if(t.dataset.preset){st.rAcc=parseFloat(t.dataset.preset);$('rAcc').value=st.rAcc;root.querySelectorAll('[data-preset]').forEach(b=>b.setAttribute('aria-pressed',String(parseFloat(b.dataset.preset)===st.rAcc)));update()}
+    else if(t.id==='addPromo'){const l=st.promos[st.promos.length-1];st.promos.push({y:l?l.y+3:st.startY+1,m:9,b:NaN});$('promoList').innerHTML=promoRows();update()}
+    else if(t.id==='addDa'){st.daActual.push({y:st.startY+1,m:1,d:NaN});$('daList').innerHTML=daRows();update()}
+    else if(t.dataset.del){const i=+t.closest('.row').dataset.i;(t.dataset.del==='promo'?st.promos:st.daActual).splice(i,1);$(t.dataset.del==='promo'?'promoList':'daList').innerHTML=t.dataset.del==='promo'?promoRows():daRows();update()}
+    else if(t.id==='resetBtn'){st=JSON.parse(JSON.stringify(DEFAULTS));buildInputs();update()}
+    else if(t.id==='copyBtn'){copyResults()}
+    else if(t.id==='pdfBtn'){savePdf()}
+  });
+}
+function onInput(e){
+  const el=e.target;
+  if(el.dataset.s){st[el.dataset.s]=el.value}
+  else if(el.dataset.k){
+    if(el.type==='number')st[el.dataset.k]=el.value===''?NaN:parseFloat(el.value);
+    else st[el.dataset.k]=parseInt(el.value,10);
+    if(el.dataset.k==='rAcc')document.querySelectorAll('[data-preset]').forEach(b=>b.setAttribute('aria-pressed',String(parseFloat(b.dataset.preset)===st.rAcc)));
+  } else if(el.id==='pcOn'){st.pcOn=el.checked;$('pcBox').style.display=el.checked?'grid':'none'}
+  else if(el.id==='showUps'){st.showUps=el.checked}
+  else if(el.dataset.pk){const r=st.promos[+el.closest('.row').dataset.i];r[el.dataset.pk]=el.value===''?NaN:parseFloat(el.value)}
+  else if(el.dataset.dk){const r=st.daActual[+el.closest('.row').dataset.i];r[el.dataset.dk]=el.value===''?NaN:parseFloat(el.value)}
+  else return;
+  update();
+}
+
+// ---------- charts ----------
+function niceTicks(min,max,count){
+  const span=max-min||1, raw=span/count, mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const f=raw/mag, step=(f<1.5?1:f<3?2:f<7?5:10)*mag, out=[];
+  for(let v=Math.ceil(min/step)*step;v<=max+1e-9;v+=step)out.push(v);
+  return out;
+}
+function chart(host,cfg){
+  const W=680,H=330,m={l:64,r:18,t:16,b:44};
+  const xs=cfg.series.flatMap(s=>s.pts.map(p=>p[0])), ys=cfg.series.flatMap(s=>s.pts.map(p=>p[1]));
+  const x0=Math.min(...xs),x1=Math.max(...xs); let y1=Math.max(...ys)*1.08; if(!(y1>0))y1=1;
+  const sx=v=>m.l+(v-x0)/(x1-x0||1)*(W-m.l-m.r), sy=v=>H-m.b-v/y1*(H-m.t-m.b);
+  const yt=niceTicks(0,y1,5), xt=niceTicks(x0,x1,7);
+  let g='';
+  yt.forEach(v=>{g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${sy(v)}" y2="${sy(v)}" stroke="var(--line)" stroke-width="1"/><text x="${m.l-8}" y="${sy(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${axis(v)}</text>`});
+  xt.forEach(v=>{g+=`<text x="${sx(v)}" y="${H-m.b+18}" text-anchor="middle" font-size="11" fill="var(--muted)">${Math.round(v)}</text>`});
+  g+=`<text x="${(m.l+W-m.r)/2}" y="${H-6}" text-anchor="middle" font-size="11.5" fill="var(--muted)">${cfg.xLabel}</text>`;
+  (cfg.marks||[]).forEach(k=>{ if(k.x<x0||k.x>x1)return;
+    g+=`<line x1="${sx(k.x)}" x2="${sx(k.x)}" y1="${m.t}" y2="${H-m.b}" stroke="${k.color||'var(--muted)'}" stroke-width="1.5" stroke-dasharray="4 4"/><text x="${sx(k.x)+4}" y="${m.t+11+(k.row||0)*13}" font-size="11" fill="${k.color||'var(--muted)'}" style="paint-order:stroke;stroke:var(--surface);stroke-width:3px">${esc(k.label)}</text>`});
+  cfg.series.forEach(s=>{
+    const d=s.pts.map((p,i)=>(i?'L':'M')+sx(p[0]).toFixed(1)+' '+sy(p[1]).toFixed(1)).join(' ');
+    g+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2.6" stroke-linejoin="round"/>`;
+    const lp=s.pts[s.pts.length-1]; g+=`<circle cx="${sx(lp[0])}" cy="${sy(lp[1])}" r="3.5" fill="${s.color}"/>`;
+  });
+  host.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cfg.aria)}">${g}<line id="hl" y1="${m.t}" y2="${H-m.b}" stroke="var(--fg)" stroke-width="1" opacity="0"/><g id="hd"></g><rect x="${m.l}" y="${m.t}" width="${W-m.l-m.r}" height="${H-m.t-m.b}" fill="transparent"/></svg><div class="tip" hidden></div>`;
+  const svg=host.querySelector('svg'),tip=host.querySelector('.tip'),hl=svg.querySelector('#hl'),hd=svg.querySelector('#hd');
+  const base=cfg.series[0].pts;
+  function move(ev){
+    const r=svg.getBoundingClientRect(), px=(ev.clientX-r.left)/r.width*W;
+    const xv=x0+(px-m.l)/(W-m.l-m.r)*(x1-x0);
+    let bi=0,bd=1e9; base.forEach((p,i)=>{const d=Math.abs(p[0]-xv);if(d<bd){bd=d;bi=i}});
+    const xx=base[bi][0]; hl.setAttribute('x1',sx(xx));hl.setAttribute('x2',sx(xx));hl.setAttribute('opacity','.4');
+    hd.innerHTML=cfg.series.map(s=>{const p=s.pts[bi];return p?`<circle cx="${sx(p[0])}" cy="${sy(p[1])}" r="4.5" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`:''}).join('');
+    tip.hidden=false;
+    tip.innerHTML=`<b>Age ${Math.round(xx*10)/10}</b>`+cfg.series.map(s=>{const p=s.pts[bi];return p?`<div><span><span class="dot" style="background:${s.color}"></span>${s.name}</span><span>${cfg.tipFmt(p[1])}</span></div>`:''}).join('');
+    const tw=tip.offsetWidth, left=sx(xx)/W*r.width+12; tip.style.left=Math.min(left,r.width-tw-4)+'px'; tip.style.top='8px';
+  }
+  svg.addEventListener('pointermove',move); svg.addEventListener('pointerdown',move);
+  svg.addEventListener('pointerleave',()=>{tip.hidden=true;hl.setAttribute('opacity','0');hd.innerHTML=''});
+}
+
+// ---------- results ----------
+let chartMode='income';
+function keys(){return st.showUps?['nps','rnps','ups']:['nps','rnps']}
+function render(r){
+  if(r.error){$('results').innerHTML=`<div class="err" role="alert">${esc(r.error)}</div>`;return}
+  const K=keys(), ageEval=st.evalAge, i0=r.income[0], iE=r.income[r.income.length-1];
+  const hi=(a,b)=>a>=b?'higher':'lower';
+  const beR=r.be.rnps, beU=r.be.ups;
+  const bestPv=K.reduce((a,b)=>r.pv[b]>r.pv[a]?b:a,K[0]);
+  const beTxt=(be,name)=>be==null?`${name} does not overtake NPS within 45 years of retirement at these inputs.`:`${name} overtakes NPS (lump sum plus annuity) at about age <b>${be.toFixed(1)}</b>. Living past that age, it pays more in total.`;
+  let v=`<section class="panel verdict"><h2>At age ${st.retAge}, RNPS gives ${inr(i0.real.rnps)} a month in today’s money. Staying in NPS gives ${inr(i0.real.nps)}.</h2><ul>
+   <li>RNPS income is ${hi(i0.real.rnps,i0.real.nps)} than NPS at the start. By age ${Math.round(ageEval)} the NPS figure becomes ${inr(iE.real.nps)} because its lump sum is spread to that age, while the RNPS pension stays at ${inr(iE.real.rnps)} (assuming DR keeps pace with inflation). In actual rupees RNPS is ${inr(i0.nom.rnps)} a month at ${st.retAge} and ${inr(iE.nom.rnps)} at ${Math.round(ageEval)}, because DR raises it every year.</li>
+   <li>${beTxt(beR,'RNPS')}${st.showUps?' '+beTxt(beU,'UPS'):''}</li>
+   <li>Total value to age ${Math.round(ageEval)} in today’s rupees: ${K.map(k=>`${NAME[k]} ${short(r.pv[k])}`).join(', ')}. Highest in this run: <b>${NAME[bestPv]}</b>.</li>
+   <li>Choosing RNPS means handing over ${short(r.forfeitReal)} (today’s money) of your NPS lump sum, ${short(r.nL)} in rupees of the retirement year.</li></ul>
+   <p class="note">This reads the numbers you entered; it does not say which option you should pick. Longer lives, lower market returns and DR that keeps up with inflation favour the assured pension. Strong market returns, short life expectancy and the wish to leave a corpus to heirs favour NPS.</p></section>`;
+  const tiles=`<div class="tiles">
+    <div class="tile"><div class="k">Last basic pay</div><div class="v">${inr(r.last)}</div><div class="s">${MN[st.retM-1]} ${st.retY}, DA ${(r.daRet*100).toFixed(0)}%</div></div>
+    <div class="tile"><div class="k">NPS corpus at retirement</div><div class="v">${short(r.cn)}</div><div class="s">${short(r.cnReal)} in today’s money</div></div>
+    <div class="tile"><div class="k">NPS lump sum (${100-st.annShare}%)</div><div class="v">${short(r.nL)}</div><div class="s">${short(r.forfeitReal)} today. Handed to government under RNPS.</div></div>
+    <div class="tile"><div class="k">First RNPS pension</div><div class="v">${inr(r.rP0)}</div><div class="s">${inr(r.rP0Real)} in today’s money, with DR</div></div>
+    ${st.showUps?`<div class="tile"><div class="k">UPS lump sum</div><div class="v">${short(r.uLump)}</div><div class="s">${short(r.uLumpReal)} in today’s money</div></div>`:''}
+    <div class="tile"><div class="k">Family pension (RNPS)</div><div class="v">${inr(st.fam/100*r.rP0Real)}</div><div class="s">Per month, today’s money, first year</div></div></div>`;
+  const legend=`<div class="legend">${K.map(k=>`<span><i style="background:${COL[k]}"></i>${NAME[k]}</span>`).join('')}</div>`;
+  const chartSec=`<section class="panel sec"><div class="sec-h"><h3>${chartMode==='income'?'Monthly income over retirement':'Break-even: running total of money received'}</h3>
+    <div class="seg" role="group" aria-label="Chart"><button data-cm="income" aria-pressed="${chartMode==='income'}">Monthly income</button><button data-cm="cum" aria-pressed="${chartMode==='cum'}">Break-even</button></div></div>
+    ${legend}<div class="chart" id="chartHost"></div>
+    <p class="note">${chartMode==='income'?'Today’s rupees. NPS falls with inflation because only the annuity is fixed; the lump sum is drawn down evenly in real terms to the age you chose. The pension rises with DR.':'Today’s rupees, discounted at '+st.beDisc+'% a year. NPS counts the lump sum as cash on day one plus the annuity; RNPS and UPS add pension month by month (UPS also its lump sum). Where a line crosses NPS, the assured pension has caught up.'}</p></section>`;
+  const ages=[]; r.income.forEach((x,i)=>{if(i===0||Math.abs(x.age-Math.round(x.age/5)*5)<1e-9||i===r.income.length-1)ages.push(x)});
+  const row=(x)=>`<tr><td>${Math.round(x.age*10)/10}</td>${K.map(k=>`<td>${inr(x.real[k])}</td><td>${inr(x.nom[k])}</td>`).join('')}</tr>`;
+  const table=`<section class="panel sec"><div class="sec-h"><h3>Monthly income by age</h3></div>
+    <div class="tbl"><table><thead><tr><th rowspan="2">Age</th>${K.map(k=>`<th colspan="2">${NAME[k]}</th>`).join('')}</tr><tr>${K.map(()=>`<th>Today’s ₹</th><th>Actual ₹</th>`).join('')}</tr></thead><tbody>${ages.map(row).join('')}</tbody></table></div>
+    <p class="note">Today’s ₹ takes out inflation, so you can compare with what you spend now. Actual ₹ is the amount that would be paid in that year. The RNPS and UPS pension rises with DR in actual rupees; in today’s rupees it stays level only when DR keeps pace with inflation. NPS actual rupees rise less because only the annuity is fixed.</p></section>`;
+  // sensitivity
+  const sensR=[6,7,8,9,10,11,12].map(x=>{const q=compute(Object.assign({},st,{rAcc:x}));return q.error?null:{x,q}}).filter(Boolean);
+  const sens1=`<section class="panel sec"><h3>What if NPS earns more?</h3><p class="note">Same details, different NPS return before retirement. RNPS income does not depend on market returns, but the NPS corpus you would hand over does.</p>
+    <div class="tbl"><table><thead><tr><th>NPS return</th><th>NPS income at ${st.retAge}</th><th>RNPS income at ${st.retAge}</th><th>RNPS ÷ NPS</th><th>Break-even age</th></tr></thead><tbody>${sensR.map(({x,q})=>`<tr><td>${x}%</td><td>${inr(q.income[0].real.nps)}</td><td>${inr(q.income[0].real.rnps)}</td><td>${(q.income[0].real.rnps/q.income[0].real.nps).toFixed(2)}×</td><td>${q.be.rnps==null?'none':q.be.rnps.toFixed(1)}</td></tr>`).join('')}</tbody></table></div></section>`;
+  const cpi=st.cpi, drRows=[0,1,2,3].map(d=>{const q=compute(Object.assign({},st,{dr:Math.max(0,cpi-d)}));return q.error?null:{d,q}}).filter(Boolean);
+  const lateIdx=r.income.length-1;
+  const sens2=`<section class="panel sec"><h3>What if DR lags inflation?</h3><p class="note">The RNPS pension is only as good as DR. Here DR grows slower than the ${cpi}% inflation you entered.</p>
+    <div class="tbl"><table><thead><tr><th>DR growth</th><th>RNPS income at ${st.retAge}</th><th>RNPS income at ${Math.round(st.evalAge)}</th><th>Break-even age</th></tr></thead><tbody>${drRows.map(({d,q})=>`<tr><td>${Math.max(0,cpi-d)}%${d?` (inflation −${d})`:''}</td><td>${inr(q.income[0].real.rnps)}</td><td>${inr(q.income[q.income.length-1].real.rnps)}</td><td>${q.be.rnps==null?'none':q.be.rnps.toFixed(1)}</td></tr>`).join('')}</tbody></table></div></section>`;
+  $('results').innerHTML=v+tiles+chartSec+table+sens1+sens2;
+  drawMain(r,K);
+  $('results').querySelectorAll('[data-cm]').forEach(b=>b.onclick=()=>{chartMode=b.dataset.cm;render(r)});
+}
+function chartCfg(mode,r,K){
+  if(mode==='income') return {xLabel:'Age',aria:'Monthly income by age in today\u2019s rupees for each option',tipFmt:inr,
+      series:K.map(k=>({name:NAME[k],color:COL[k],pts:r.income.map(x=>[x.age,x.real[k]])}))};
+  const marks=[]; if(r.be.rnps!=null)marks.push({x:r.be.rnps,label:'RNPS catches up '+r.be.rnps.toFixed(1),color:'var(--rnps)',row:0});
+  if(st.showUps&&r.be.ups!=null)marks.push({x:r.be.ups,label:'UPS '+r.be.ups.toFixed(1),color:'var(--ups)',row:1});
+  return {xLabel:'Age',aria:'Cumulative value of money received by age for each option',tipFmt:short,marks,
+      series:K.map(k=>({name:NAME[k],color:COL[k],pts:r.cum.filter(c=>c.k<=35).map(c=>[c.age,c[k]])}))};
+}
+function drawMain(r,K){chart($('chartHost'),chartCfg(chartMode,r,K))}
+function copyResults(){
+  const r=compute(st); if(r.error)return;
+  const K=keys(), i0=r.income[0], iE=r.income[r.income.length-1];
+  const who=[st.name,st.desig,st.lvl].filter(x=>x&&String(x).trim()).join(', ');
+  const t=(who?who+'\n':'')+`Pension comparison (today's rupees, per month)\nAt age ${st.retAge}: ${K.map(k=>`${NAME[k]} ${inr(i0.real[k])}`).join(' | ')}\nAt age ${Math.round(st.evalAge)}: ${K.map(k=>`${NAME[k]} ${inr(iE.real[k])}`).join(' | ')}\nActual rupees paid that year, at ${st.retAge}: ${K.map(k=>`${NAME[k]} ${inr(i0.nom[k])}`).join(' | ')}\nActual rupees paid that year, at ${Math.round(st.evalAge)}: ${K.map(k=>`${NAME[k]} ${inr(iE.nom[k])}`).join(' | ')}\nRNPS break-even vs NPS: ${r.be.rnps==null?'none within 45 years':'age '+r.be.rnps.toFixed(1)}\nNPS corpus at retirement: ${short(r.cn)} (${short(r.cnReal)} today)\nReturn assumed ${st.rAcc}%, inflation ${st.cpi}%, DR ${st.dr}%. Educational estimate, not advice.`;
+  const done=ok=>{$('copyMsg').textContent=ok?'Copied.':'Select and copy from the box below.';if(!ok){let ta=$('copyBox');if(!ta){ta=document.createElement('textarea');ta.id='copyBox';ta.style.cssText='width:100%;height:120px;margin-top:8px;font:12px monospace';$('inputs').appendChild(ta)}ta.value=t;ta.select()}};
+  try{navigator.clipboard.writeText(t).then(()=>done(true),()=>done(false))}catch(e){done(false)}
+}
+let raf=0;
+function svcText(){const e=mi(st.retY,st.retM),j=mi(st.joinY,st.joinM),m=e-j+1;if(!Number.isFinite(m)||m<1)return 'Check the dates';const y=Math.floor(m/12),r=m%12;return y+' completed years'+(r?' ('+y+' years '+r+' months in all)':'')}
+function update(){cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{save();const so=$('svcOut');if(so)so.textContent=svcText();render(compute(st));syncExample()})}
+
+// ---------- learn / limits ----------
+$('view-learn').innerHTML=`
+<section class="panel"><h2>The three options at a glance</h2>
+<div class="tbl"><table><thead><tr><th></th><th>Stay in NPS</th><th>RNPS (Maharashtra revised NPS)</th><th>UPS <span class="badge">check eligibility</span></th></tr></thead><tbody>
+<tr><td>What you get</td><td>Whatever your corpus buys: a lump sum plus an annuity</td><td>An assured pension of 50% of your last basic pay, with DR</td><td>An assured pension of 50% of the average basic pay of your last 12 months, with DR</td></tr>
+<tr><td>Service needed for the full amount</td><td>Not applicable</td><td>20 years</td><td>25 years; pro-rata down to 10 years</td></tr>
+<tr><td>Your NPS corpus</td><td>You keep it: 60% as cash, 40% buys an annuity</td><td>You deposit the 60% lump sum with the government; the 40% annuity is offset against your pension</td><td>Funds the assured pension. You may withdraw up to 60%, and the pension falls in proportion</td></tr>
+<tr><td>Extra lump sum at retirement</td><td>No</td><td>No (retirement gratuity applies as per earlier orders)</td><td>Yes: 1/10th of (Basic+DA) for every completed 6 months of service</td></tr>
+<tr><td>Minimum pension</td><td>None</td><td>₹7,500 a month after 10 years</td><td>₹10,000 a month after 10 years</td></tr>
+<tr><td>Family pension</td><td>Depends on the annuity option you choose</td><td>60% of the pension</td><td>60% of the pension</td></tr>
+<tr><td>Who carries market risk</td><td>You</td><td>The state government</td><td>The government</td></tr>
+<tr><td>Option window</td><td>Default</td><td>One-time option by 31.12.2026</td><td>Central window closed on 30.11.2025. A one-time RNPS to UPS switch is mentioned in the state GR (by 31.03.2027 or the earlier central cut-off). No state UPS window found.</td></tr>
+</tbody></table></div></section>
+<section class="panel"><h2>The idea behind the comparison</h2>
+<p>With NPS you take a pot of money and turn part of it into income. With RNPS or UPS you swap part or all of that pot for a promise: a pension linked to your last pay that keeps rising with DR for as long as you and your spouse live.</p>
+<p>That makes the decision a question of how long the promise pays versus what the pot could have earned. The <b>break-even age</b> is the age where the money received from the pension, added up month by month, overtakes the NPS lump sum plus annuity. The calculator finds it without assuming any life expectancy, so you can compare it with your own view.</p>
+<ul><li><b>Returns:</b> the higher your NPS return, the larger the pot you give up, and the later the break-even age.</li><li><b>DR:</b> the pension is protected only if DR keeps pace with inflation.</li><li><b>Last basic pay:</b> RNPS pays on your last basic pay, so promotions in the last years raise it directly.</li><li><b>Liquidity and legacy:</b> an assured pension gives no cash lump sum and no corpus for heirs, apart from family pension.</li></ul></section>
+<section class="panel"><h2>Questions to ask before choosing</h2>
+<ul><li>How long do people in my family usually live, and how old is my spouse?</li><li>Will I need a large lump sum at retirement, for example for a house or a child’s education?</li><li>Do I have other income, such as rent, that already covers some expenses?</li><li>Have I made NPS withdrawals? Under RNPS they must be repaid with 10% interest.</li><li>If I resign before retirement, I stay in NPS and get no RNPS pension.</li></ul></section>
+<section class="panel"><h2>Sources</h2><ul>
+<li>Maharashtra Finance Department GR of 20.09.2024 (adopting UPS and RNPS terms) and the RNPS procedure circular of 06.05.2026, as read by the author of this tool.</li>
+<li><a href="https://www.freepressjournal.in/mumbai/maharashtra-pension-update-govt-makes-revised-nps-optional-for-existing-employees-until-december-2026" target="_blank" rel="noopener">Free Press Journal on the 06.05.2026 circular</a></li>
+<li><a href="https://www.outlookmoney.com/retirement/pension/118-lakh-central-govt-employees-opted-for-unified-pension-scheme" target="_blank" rel="noopener">Outlook Money on the central UPS option window</a></li></ul></section>`;
+$('view-limits').innerHTML=`
+<section class="panel"><h2>How the numbers are built</h2><ul>
+<li>Basic pay grows with your annual increment and any promotions you list. A promotion replaces the running basic in that month.</li>
+<li>DA rises every January and July at the growth rate you set, unless you enter the actual announced rate. A pay commission multiplies basic pay by the fitment factor and resets DA.</li>
+<li>Each month, your contribution plus the government contribution (24% of Basic+DA for NPS, 20% for the UPS pot) is added to the corpus, which earns the return you set.</li>
+<li>NPS: the annuity share of the corpus buys a flat annuity; the rest is a lump sum drawn down with yearly inflation step-ups to the age you chose, earning the post-retirement return.</li>
+<li>RNPS: pension = your percentage × last basic × service factor, plus DR at retirement. UPS: the same on the 12-month average, plus its lump sum.</li>
+<li>Today’s rupees divide future amounts by inflation from now to the retirement month and onward.</li></ul></section>
+<section class="panel"><h2>What it leaves out</h2><ul>
+<li>Income tax on pension, annuity and lump sums.</li>
+<li>Minimum pension floors, gratuity and leave encashment.</li>
+<li>Repayment of past NPS withdrawals (10% interest under RNPS) and any partial withdrawals you plan.</li>
+<li>Annuity options with return of purchase price, joint-life annuities, or changes in annuity rates.</li>
+<li>Pay commission arrears and the actual fitment of a new pay matrix.</li>
+<li>Death or resignation before retirement, and the exact family pension rules for each case.</li>
+<li>Whether UPS is open to you. This tool shows UPS under the reading that your own pot funds the assured pension. If your office confirms you may keep an annuity from your pot on top, UPS would be higher.</li></ul></section>
+<section class="panel"><h2>Privacy</h2><p>Your entries are saved only in this browser on this device so the page remembers them next time. Nothing is sent to anyone. Use Reset to example to clear them. Once installed, the app also works without an internet connection.</p></section>`;
+
+// ---------- tabs ----------
+function showTab(t){
+  ['calc','learn','limits'].forEach(k=>{$('view-'+k).hidden=(k!==t);$('t-'+k).setAttribute('aria-selected',String(k===t))});
+  try{history.replaceState(null,'','#'+t)}catch(e){}
+}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+(function(){const h=(location.hash||'').slice(1);if(['learn','limits'].includes(h))showTab(h)})();
+window.addEventListener('hashchange',()=>{const h=(location.hash||'').slice(1);showTab(['calc','learn','limits'].includes(h)?h:'calc')});
+
+buildInputs();
+render(compute(st));
+// ---------- PDF report ----------
+function inputsSummary(){
+  const mo=(y,m)=>MN[m-1]+' '+y;
+  const da=st.daActual.filter(x=>Number.isFinite(x.d)).map(x=>mo(x.y,x.m)+': '+x.d+'%').join('; ');
+  const rows=[['Calculated from',mo(st.startY,st.startM)],['Joined regular service',mo(st.joinY,st.joinM)],['Last month of service',mo(st.retY,st.retM)],['Qualifying service',svcText()],
+   ['Age at retirement',st.retAge],['Compared up to age',st.evalAge],['Basic pay today',inr(st.basic0)],['DA today',st.da0+'%'],
+   ['NPS corpus today',inr(st.corp0)],['Contributions: you / govt NPS / govt UPS pot',st.emp+'% / '+st.erNps+'% / '+st.erUps+'%'],
+   ['Annual increment',st.inc+'% in '+MN[st.incM-1]],['Promotions (new basic)',st.promos.length?st.promos.map(p=>mo(p.y,p.m)+': '+inr(p.b)).join('; '):'None'],
+   ['DA growth assumed',st.dag+'% a year'+(da?'; actual DA entered: '+da:'')],['Pay commission',st.pcOn?mo(st.pcY,st.pcM)+', fitment '+st.pcFit+'x, DA after '+st.pcDa+'%':'Not included'],
+   ['NPS return before / after retirement',st.rAcc+'% / '+st.rPost+'%'],['Annuity',st.annShare+'% of corpus at '+st.annRate+'%'],
+   ['Inflation / DR growth',st.cpi+'% / '+st.dr+'%'],['Break-even discount rate',st.beDisc+'%'],
+   ['RNPS pension',st.rnPct+'% of last basic; full after '+st.rnFull+' years'],['UPS pension',st.upPct+'% of 12-month average basic; full after '+st.upFull+' years'],
+   ['UPS lump sum / own pot withdrawn',st.upHalf+'x per half-year / '+st.upW+'%'],['Family pension',st.fam+'%']];
+  [['Name of the employee',st.name],['Current designation',st.desig],['Current academic level',st.lvl]].filter(x=>x[1]&&String(x[1]).trim()).reverse().forEach(x=>rows.unshift(x));
+  return '<div class="rep-grid">'+rows.map(x=>'<div><b>'+esc(x[0])+'</b><span>'+esc(String(x[1]))+'</span></div>').join('')+'</div>';
+}
+function buildReport(){
+  const rep=$('report'), r=compute(st);
+  if(r.error){rep.innerHTML='<p>'+esc(r.error)+'</p>';return}
+  const K=keys();
+  render(r); // make sure the results panel is current
+  const res=$('results').cloneNode(true); res.removeAttribute('id');
+  res.querySelectorAll('.seg,.tip').forEach(x=>x.remove());
+  const ch=res.querySelector('#chartHost'); if(ch)ch.closest('.sec').remove();
+  const legend='<div class="legend">'+K.map(k=>'<span><i style="background:'+COL[k]+'"></i>'+NAME[k]+'</span>').join('')+'</div>';
+  const mk=(title,mode,note)=>{const sec=document.createElement('section');sec.className='panel sec';sec.innerHTML='<h3>'+title+'</h3>'+legend+'<div class="chart"></div><p class="note">'+note+'</p>';chart(sec.querySelector('.chart'),chartCfg(mode,r,K));sec.querySelectorAll('.tip').forEach(x=>x.remove());return sec};
+  const c1=mk('Monthly income over retirement','income','Today\u2019s rupees. The NPS lump sum is spread to age '+Math.round(st.evalAge)+'; the pension rises with DR.');
+  const c2=mk('Break-even: running total of money received','cum','Today\u2019s rupees, discounted at '+st.beDisc+'% a year. Where a line crosses NPS, the assured pension has caught up.');
+  const tbl=res.querySelector('.tbl'); const anchor=tbl?tbl.closest('.sec'):null;
+  if(anchor){anchor.before(c1);anchor.before(c2)}else{res.append(c1,c2)}
+  const when=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  rep.innerHTML='<div class="rep-top"><h1>Pension Choice Calculator: comparison report</h1><span class="note">Prepared '+when+'</span></div>'
+   +'<section class="panel sec" style="margin-bottom:12px"><h3>Details entered</h3>'+inputsSummary()+'</section>';
+  rep.appendChild(res);
+  const f=document.createElement('p');f.className='note';f.style.marginTop='12px';
+  f.textContent='Educational estimate built from the Maharashtra GRs of 20.09.2024 and 06.05.2026 and general NPS rules. It is not an official calculator and not financial advice. It leaves out tax, past NPS withdrawals, gratuity and minimum-pension floors. Confirm rules, eligibility and deadlines with your DDO or the Finance Department.';
+  rep.appendChild(f);
+}
+function savePdf(){
+  try{buildReport();$('copyMsg').textContent='In the print window, choose Save as PDF.';window.print()}
+  catch(e){$('copyMsg').textContent='Printing is not available here. Open the installed app or the web address in Chrome.'}
+}
+window.addEventListener('beforeprint',()=>{try{buildReport()}catch(e){}});
+// ---------- install and offline ----------
+let deferredInstall=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;$('installBtn').hidden=false});
+$('installBtn').addEventListener('click',async()=>{if(!deferredInstall)return;deferredInstall.prompt();try{await deferredInstall.userChoice}catch(e){}deferredInstall=null;$('installBtn').hidden=true});
+window.addEventListener('appinstalled',()=>{$('installBtn').hidden=true});
+if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>
